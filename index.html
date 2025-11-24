@@ -1,0 +1,981 @@
+<!DOCTYPE html>
+<html lang="pt-BR" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Planejador UFABC - TPI System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        pink: {
+                            50: '#fdf2f8',
+                            100: '#fce7f3',
+                            200: '#fbcfe8',
+                            300: '#f9a8d4',
+                            400: '#f472b6',
+                            500: '#ec4899',
+                            600: '#db2777',
+                            700: '#be185d',
+                            800: '#9d174d',
+                            900: '#831843',
+                            950: '#500724',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(236, 72, 153, 0.1); }
+        ::-webkit-scrollbar-thumb { background: rgba(236, 72, 153, 0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(236, 72, 153, 0.8); }
+
+        .glass {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        .dark .glass {
+            background: rgba(80, 7, 36, 0.7);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        body { transition: background-color 0.3s ease, color 0.3s ease; }
+
+        /* Estilos específicos para Impressão/PDF */
+        @media print {
+            .no-print { display: none !important; }
+            
+            body { 
+                background: white; 
+                color: black; 
+            }
+            
+            .glass { 
+                box-shadow: none; 
+                border: 1px solid #ddd; 
+                background: white; 
+            }
+            
+            .dark .glass { 
+                background: white; 
+                color: black; 
+                border: 1px solid #ddd; 
+            }
+            
+            /* Forçar cores de fundo para gráficos e barras */
+            * {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            
+            /* Ajustes de Layout */
+            main { 
+                padding: 0; 
+                max-width: 100%; 
+            }
+            
+            .card { 
+                break-inside: avoid; 
+                border: 1px solid #ccc; 
+                page-break-inside: avoid; 
+            }
+            
+            /* Forçar cor rosa no título */
+            h1 { 
+                color: #db2777 !important; 
+            }
+        }
+    </style>
+</head>
+<body class="bg-pink-50 text-gray-800 dark:bg-pink-950 dark:text-pink-100 min-h-screen font-sans">
+
+    <!-- Navbar -->
+    <nav class="sticky top-0 z-50 glass shadow-sm transition-colors duration-300 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-graduation-cap text-pink-500 text-2xl"></i>
+                    <h1 class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-500 to-purple-500">
+                        UFABC Planner
+                    </h1>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="toggleAboutModal()" class="p-2 rounded-full hover:bg-pink-200 dark:hover:bg-pink-900 transition-colors focus:outline-none text-pink-600 dark:text-pink-300" title="Sobre o Site">
+                        <i class="fas fa-info-circle"></i>
+                    </button>
+                    <button onclick="toggleTheme()" class="p-2 rounded-full hover:bg-pink-200 dark:hover:bg-pink-900 transition-colors focus:outline-none">
+                        <i id="theme-icon" class="fas fa-moon text-pink-600 dark:text-pink-300"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Modal Sobre (About) -->
+    <div id="about-modal" class="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 hidden no-print backdrop-blur-sm">
+        <div class="bg-white dark:bg-pink-900 rounded-2xl p-8 max-w-lg w-full mx-4 shadow-2xl border border-pink-200 dark:border-pink-700 relative animate-fade-in">
+            <button onclick="toggleAboutModal()" class="absolute top-4 right-4 text-gray-400 hover:text-pink-500">
+                <i class="fas fa-times text-xl"></i>
+            </button>
+            <h2 class="text-2xl font-bold mb-4 text-pink-600 dark:text-pink-300">Sobre o UFABC Planner</h2>
+            <div class="space-y-4 text-sm text-gray-600 dark:text-gray-200">
+                <p>
+                    Bem-vindo ao <strong>UFABC Planner</strong>! Este é um sistema open-source desenvolvido para auxiliar estudantes do Bacharelado em Ciência e Tecnologia (BC&T) e Ciências e Humanidades (BCH) a organizarem sua vida acadêmica.
+                </p>
+                <h3 class="font-bold text-pink-500">Funcionalidades Principais:</h3>
+                <ul class="list-disc pl-5 space-y-1">
+                    <li><strong>Sistema TPI:</strong> Cálculo automático de carga horária Teórica (T), Prática (P) e Estudo Individual (I).</li>
+                    <li><strong>Rastreador de Estudos:</strong> Cronômetro manual para registrar suas horas de estudo semanais e comparar com a meta da UFABC.</li>
+                    <li><strong>Kanban:</strong> Organize visualmente o que está cursando, o que falta e o que já concluiu.</li>
+                    <li><strong>Listas:</strong> Gerenciamento de tarefas (provas, relatórios) vinculadas às matérias.</li>
+                </ul>
+                <p class="italic text-xs mt-4 border-t border-pink-100 pt-4">
+                    Seus dados são salvos localmente no navegador. Lembre-se de fazer backup!
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        
+        <!-- Dashboard / TPI Summary -->
+        <section class="mb-8 grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div class="glass rounded-2xl p-4 shadow-sm border-l-4 border-pink-400 card">
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-pink-300">Créditos Totais</h3>
+                <p class="text-3xl font-bold text-pink-600 dark:text-pink-200" id="total-credits">0</p>
+                <p class="text-xs mt-1 opacity-70">Soma de (T + P)</p>
+            </div>
+            <div class="glass rounded-2xl p-4 shadow-sm border-l-4 border-purple-400 card">
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-pink-300">Carga Horária (T)</h3>
+                <p class="text-3xl font-bold text-purple-600 dark:text-purple-300" id="total-t">0</p>
+                <p class="text-xs mt-1 opacity-70">Horas Teóricas</p>
+            </div>
+            <div class="glass rounded-2xl p-4 shadow-sm border-l-4 border-blue-400 card">
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-pink-300">Carga Horária (P)</h3>
+                <p class="text-3xl font-bold text-blue-600 dark:text-blue-300" id="total-p">0</p>
+                <p class="text-xs mt-1 opacity-70">Horas Práticas</p>
+            </div>
+            <div class="glass rounded-2xl p-4 shadow-sm border-l-4 border-green-400 card">
+                <h3 class="text-sm font-semibold uppercase tracking-wider text-gray-500 dark:text-pink-300">Estudo Indiv. (I)</h3>
+                <p class="text-3xl font-bold text-green-600 dark:text-green-300" id="total-i">0</p>
+                <p class="text-xs mt-1 opacity-70">Horas de Estudo em Casa</p>
+            </div>
+        </section>
+
+        <!-- NOVO: Rastreador de Estudo (TPI Tracker) -->
+        <section class="mb-10 card break-inside-avoid">
+            <div class="bg-pink-900/90 dark:bg-black/40 rounded-2xl p-6 shadow-md text-pink-50 border border-pink-800 print:bg-white print:text-black print:border-pink-200">
+                <div class="flex flex-col md:flex-row justify-between items-center mb-6">
+                    <h2 class="text-xl font-bold flex items-center gap-2 text-white print:text-pink-700">
+                        <i class="fas fa-stopwatch text-pink-400"></i> 1. Rastreador de Estudo (TPI)
+                    </h2>
+                    <button onclick="resetWeeklyProgress()" class="no-print text-xs bg-pink-800 hover:bg-pink-700 px-3 py-1 rounded-full text-pink-200 transition-colors mt-2 md:mt-0">
+                        <i class="fas fa-undo"></i> Resetar Semana
+                    </button>
+                </div>
+
+                <!-- Progress Bar Container -->
+                <div class="border-2 border-dashed border-pink-500/50 rounded-xl p-4 mb-6 bg-black/20 text-center print:bg-gray-50 print:border-gray-300">
+                    <span class="text-lg font-bold text-white print:text-black">
+                        Progresso Semanal: <span class="text-pink-300 print:text-pink-600" id="tracker-total-done">0.0</span> / <span class="text-white print:text-black" id="tracker-total-goal">0</span> horas
+                    </span>
+                    <div class="w-full bg-pink-950/50 rounded-full h-2.5 mt-2 print:bg-gray-200">
+                        <div id="tracker-progress-bar" class="bg-gradient-to-r from-pink-500 to-purple-500 h-2.5 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                </div>
+
+                <!-- List of Subjects -->
+                <div class="overflow-x-auto rounded-xl border border-pink-700/50 print:border-gray-300">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-pink-950 text-pink-200 text-sm uppercase tracking-wider border-b border-pink-800 print:bg-pink-100 print:text-pink-800">
+                                <th class="py-3 px-6 font-semibold">Disciplina</th>
+                                <th class="py-3 px-6 font-semibold text-center">Meta TPI (I)</th>
+                                <th class="py-3 px-6 font-semibold text-center">Concluído</th>
+                                <th class="py-3 px-6 font-semibold text-right no-print">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tracker-body" class="bg-pink-900/30 text-sm divide-y divide-pink-800/50 print:bg-white print:text-black print:divide-gray-200">
+                            <!-- Dynamic Rows -->
+                            <tr>
+                                <td colspan="4" class="py-6 text-center text-pink-300 italic">
+                                    Adicione matérias no quadro "Fazendo" (Seção 3) para rastrear o estudo aqui.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Course Selector (Hidden in Print) -->
+        <section class="mb-10 no-print">
+            <div class="glass rounded-2xl p-6 shadow-md">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-plus-circle text-pink-500"></i> 2. Adicionar Disciplinas (Banco de Dados)
+                </h2>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="relative flex-grow">
+                        <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                            <i class="fas fa-search text-gray-400"></i>
+                        </span>
+                        <input type="text" id="course-search" placeholder="Buscar matéria (ex: Funcoes, raca, genero...)" 
+                            class="w-full pl-10 pr-4 py-3 rounded-xl border border-pink-200 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:border-transparent dark:bg-pink-900 dark:border-pink-800 dark:text-white transition-all"
+                            onkeyup="filterCourses()">
+                    </div>
+                </div>
+                
+                <!-- Search Results Area -->
+                <div id="search-results" class="mt-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto hidden">
+                    <!-- Dynamic Items -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Kanban Board -->
+        <section class="mb-12">
+            <h2 class="text-xl font-bold mb-6 flex items-center gap-2">
+                <i class="fas fa-tasks text-pink-500"></i> 3. Seu Fluxo
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                
+                <!-- Column: Pending -->
+                <div class="flex flex-col bg-white/50 dark:bg-black/20 rounded-2xl p-4 border border-pink-100 dark:border-pink-900 h-full card">
+                    <div class="flex justify-between items-center mb-4 pb-2 border-b border-pink-200 dark:border-pink-800">
+                        <span class="font-bold text-gray-600 dark:text-pink-200">Pendentes</span>
+                        <span id="count-pending" class="bg-gray-200 dark:bg-pink-800 text-gray-700 dark:text-pink-100 text-xs px-2 py-1 rounded-full">0</span>
+                    </div>
+                    <div id="list-pending" class="flex-grow space-y-3 min-h-[200px]" ondrop="drop(event, 'pending')" ondragover="allowDrop(event)">
+                        <div class="text-center text-gray-400 text-sm mt-10 italic empty-msg">Nenhuma matéria planejada</div>
+                    </div>
+                </div>
+
+                <!-- Column: Doing -->
+                <div class="flex flex-col bg-pink-50/80 dark:bg-pink-900/20 rounded-2xl p-4 border border-pink-200 dark:border-pink-800 h-full card">
+                    <div class="flex justify-between items-center mb-4 pb-2 border-b border-pink-200 dark:border-pink-800">
+                        <span class="font-bold text-pink-600 dark:text-pink-300">Fazendo (Atual)</span>
+                        <span id="count-doing" class="bg-pink-200 dark:bg-pink-700 text-pink-700 dark:text-pink-100 text-xs px-2 py-1 rounded-full">0</span>
+                    </div>
+                    <div id="list-doing" class="flex-grow space-y-3 min-h-[200px]" ondrop="drop(event, 'doing')" ondragover="allowDrop(event)">
+                         <div class="text-center text-pink-300/50 text-sm mt-10 italic empty-msg">Arraste aqui</div>
+                    </div>
+                </div>
+
+                <!-- Column: Completed -->
+                <div class="flex flex-col bg-white/50 dark:bg-black/20 rounded-2xl p-4 border border-green-100 dark:border-green-900/30 h-full card">
+                    <div class="flex justify-between items-center mb-4 pb-2 border-b border-green-200 dark:border-pink-800">
+                        <span class="font-bold text-green-600 dark:text-green-300">Concluído</span>
+                        <span id="count-completed" class="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-100 text-xs px-2 py-1 rounded-full">0</span>
+                    </div>
+                    <div id="list-completed" class="flex-grow space-y-3 min-h-[200px]" ondrop="drop(event, 'completed')" ondragover="allowDrop(event)">
+                        <div class="text-center text-gray-400 text-sm mt-10 italic empty-msg">Nada concluído ainda</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- New Section: Lists and Reports -->
+        <section class="mb-12 card break-inside-avoid">
+            <div class="glass rounded-2xl p-6 shadow-md border-t-4 border-pink-500">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+                    <h2 class="text-xl font-bold flex items-center gap-2">
+                        <i class="fas fa-clipboard-list text-pink-500"></i> 4. Listas e Relatórios
+                    </h2>
+                    
+                    <div class="flex gap-2 w-full md:w-auto no-print">
+                        <input type="text" id="task-name" placeholder="Tarefa (ex: Lista 1)" 
+                            class="px-4 py-2 rounded-lg border border-pink-200 dark:bg-pink-900 dark:border-pink-800 focus:outline-none focus:ring-2 focus:ring-pink-400 text-sm w-full"
+                            oninput="this.classList.remove('border-red-500', 'ring-2', 'ring-red-500')">
+                        <select id="task-subject" 
+                            class="px-4 py-2 rounded-lg border border-pink-200 dark:bg-pink-900 dark:border-pink-800 focus:outline-none focus:ring-2 focus:ring-pink-400 text-sm max-w-[150px]"
+                            onchange="this.classList.remove('border-red-500', 'ring-2', 'ring-red-500', 'animate-pulse')">
+                            <option value="">Matéria</option>
+                        </select>
+                        <button onclick="addTask()" class="bg-pink-500 hover:bg-pink-600 text-white px-4 py-2 rounded-lg text-sm font-bold transition-colors">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="overflow-hidden rounded-xl border border-pink-100 dark:border-pink-800">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-pink-900 text-pink-100 text-sm uppercase tracking-wider">
+                                <th class="py-3 px-6 font-semibold">Tarefa</th>
+                                <th class="py-3 px-6 font-semibold">Matéria</th>
+                                <th class="py-3 px-6 font-semibold">Status</th>
+                                <th class="py-3 px-6 font-semibold text-right no-print">Mudar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tasks-body" class="bg-white dark:bg-pink-900/30 text-sm divide-y divide-pink-100 dark:divide-pink-800">
+                            <!-- Tasks Rows -->
+                        </tbody>
+                    </table>
+                    <div id="no-tasks-msg" class="p-8 text-center text-gray-400 dark:text-pink-300/50 italic hidden">
+                        Nenhuma tarefa adicionada. Adicione acima!
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- Detailed Spreadsheet View -->
+        <section class="mb-10 card break-inside-avoid">
+            <div class="glass rounded-2xl p-6 shadow-md overflow-hidden">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                    <i class="fas fa-table text-pink-500"></i> Planilha Detalhada (T-P-I)
+                </h2>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-sm text-gray-500 dark:text-pink-300 border-b border-pink-200 dark:border-pink-800">
+                                <th class="py-3 px-4">Disciplina</th>
+                                <th class="py-3 px-4">Categoria</th>
+                                <th class="py-3 px-4 text-center">T</th>
+                                <th class="py-3 px-4 text-center">P</th>
+                                <th class="py-3 px-4 text-center">I</th>
+                                <th class="py-3 px-4 text-center">Créditos</th>
+                                <th class="py-3 px-4 text-right">Status</th>
+                                <th class="py-3 px-4 text-right no-print">Ação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="spreadsheet-body" class="text-sm">
+                            <!-- Rows -->
+                        </tbody>
+                        <tfoot class="border-t-2 border-pink-200 dark:border-pink-700 font-bold bg-pink-50 dark:bg-pink-900/50">
+                            <tr>
+                                <td colspan="2" class="py-3 px-4 text-right">TOTAIS GERAIS:</td>
+                                <td class="py-3 px-4 text-center text-purple-600 dark:text-purple-300" id="table-total-t">0</td>
+                                <td class="py-3 px-4 text-center text-blue-600 dark:text-blue-300" id="table-total-p">0</td>
+                                <td class="py-3 px-4 text-center text-green-600 dark:text-green-300" id="table-total-i">0</td>
+                                <td class="py-3 px-4 text-center text-pink-600 dark:text-pink-300" id="table-total-credits">0</td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- Backup & Settings Section (Hidden in Print) -->
+        <section class="mb-12 no-print">
+            <div class="glass rounded-2xl p-6 shadow-md border-t-4 border-gray-400 dark:border-gray-600">
+                <h2 class="text-xl font-bold mb-4 flex items-center gap-2 text-gray-700 dark:text-gray-200">
+                    <i class="fas fa-save text-pink-500"></i> Salvar e Restaurar Dados
+                </h2>
+                <p class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                    Use os botões abaixo para criar uma cópia de segurança (backup JSON) ou gerar um relatório visual (PDF).
+                </p>
+                <div class="flex flex-col sm:flex-row gap-4 flex-wrap">
+                    <button onclick="downloadData()" class="flex items-center justify-center gap-2 bg-pink-600 hover:bg-pink-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-sm">
+                        <i class="fas fa-file-code"></i> Dados (JSON)
+                    </button>
+
+                    <button onclick="printPDF()" class="flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-6 py-3 rounded-xl font-bold transition-all shadow-sm">
+                        <i class="fas fa-file-pdf"></i> Salvar Relatório PDF
+                    </button>
+                    
+                    <div class="relative">
+                        <input type="file" id="upload-input" accept=".json" class="hidden" onchange="uploadData(this)">
+                        <button onclick="document.getElementById('upload-input').click()" class="flex items-center justify-center gap-2 bg-white dark:bg-pink-900 border border-pink-300 dark:border-pink-700 text-pink-700 dark:text-pink-100 px-6 py-3 rounded-xl font-bold hover:bg-pink-50 dark:hover:bg-pink-800 transition-all shadow-sm w-full">
+                            <i class="fas fa-upload"></i> Carregar Backup
+                        </button>
+                    </div>
+
+                    <button onclick="clearData()" class="flex items-center justify-center gap-2 bg-red-100 hover:bg-red-200 text-red-600 dark:bg-red-900/30 dark:text-red-300 px-6 py-3 rounded-xl font-bold transition-all ml-auto">
+                        <i class="fas fa-trash"></i> Limpar Tudo
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <footer class="text-center py-6 text-sm text-pink-400 dark:text-pink-600 no-print">
+        <p>Feito para ajudar alunos do BC&T e BCH UFABC ✨</p>
+    </footer>
+
+    <!-- Templates -->
+    <template id="card-template">
+        <div class="bg-white dark:bg-pink-800 rounded-xl p-3 shadow-sm border border-pink-100 dark:border-pink-700 hover:shadow-md transition-shadow cursor-move group relative card" draggable="true">
+            <div class="flex justify-between items-start">
+                <h4 class="font-bold text-gray-800 dark:text-pink-50 text-sm leading-tight pr-4 item-name">Nome Matéria</h4>
+                <button class="text-gray-300 hover:text-red-400 transition-colors absolute top-2 right-2 delete-btn no-print">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="flex gap-2 mt-2 text-xs">
+                <span class="bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 px-1.5 py-0.5 rounded item-t">T:0</span>
+                <span class="bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-200 px-1.5 py-0.5 rounded item-p">P:0</span>
+                <span class="bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 px-1.5 py-0.5 rounded item-i">I:0</span>
+            </div>
+            <div class="mt-3 pt-2 border-t border-gray-100 dark:border-pink-700 flex justify-between text-xs md:hidden no-print">
+                <button class="move-prev text-gray-400 hover:text-pink-500">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <button class="move-next text-gray-400 hover:text-pink-500">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+    </template>
+
+    <script>
+        // --- Data: UFABC Courses Database (BC&T + BCH) ---
+        const courseDB = [
+            // BC&T Mandatory
+            { id: 'bcmt', name: 'Bases Computacionais da Ciência', t: 0, p: 2, i: 2, cat: 'BC&T - Obrigatória' },
+            { id: 'bm', name: 'Bases Matemáticas', t: 4, p: 0, i: 5, cat: 'BC&T - Obrigatória' },
+            { id: 'be', name: 'Bases Experimentais das Ciências Naturais', t: 0, p: 3, i: 2, cat: 'BC&T - Obrigatória' },
+            { id: 'em', name: 'Estrutura da Matéria', t: 3, p: 0, i: 4, cat: 'BC&T - Obrigatória' },
+            { id: 'fuv', name: 'Funções de Uma Variável', t: 4, p: 0, i: 5, cat: 'BC&T - Obrigatória' },
+            { id: 'ga', name: 'Geometria Analítica', t: 3, p: 0, i: 4, cat: 'BC&T - Obrigatória' },
+            { id: 'fenmec', name: 'Fenômenos Mecânicos', t: 3, p: 1, i: 5, cat: 'BC&T - Obrigatória' },
+            { id: 'transcal', name: 'Fenômenos Térmicos', t: 3, p: 1, i: 5, cat: 'BC&T - Obrigatória' },
+            { id: 'evolucao', name: 'Evolução e Diversidade', t: 3, p: 0, i: 4, cat: 'BC&T - Obrigatória' },
+            { id: 'bio', name: 'Biodiversidade: Interações e Transformações', t: 3, p: 0, i: 4, cat: 'BC&T - Obrigatória' },
+            { id: 'pi', name: 'Processamento da Informação', t: 2, p: 2, i: 4, cat: 'BC&T - Obrigatória' },
+            { id: 'qg', name: 'Transformações Químicas', t: 3, p: 1, i: 5, cat: 'BC&T - Obrigatória' },
+            { id: 'fvv', name: 'Funções de Várias Variáveis', t: 4, p: 0, i: 5, cat: 'BC&T - Obrigatória' },
+            { id: 'ieds', name: 'Intro. as Equações Diferenciais Ordinárias', t: 4, p: 0, i: 4, cat: 'BC&T - Obrigatória' },
+            { id: 'mc', name: 'Mecânica Quântica', t: 3, p: 0, i: 4, cat: 'BC&T - Obrigatória' },
+            { id: 'iem', name: 'Interações Eletromagnéticas', t: 3, p: 1, i: 5, cat: 'BC&T - Obrigatória' },
+            { id: 'ni', name: 'Natureza da Informação', t: 3, p: 0, i: 3, cat: 'BC&T - Obrigatória' },
+            
+            // BCH Mandatory (Common)
+            { id: 'becm', name: 'Bases Epistemológicas da Ciência Moderna', t: 3, p: 0, i: 4, cat: 'BCH - Obrigatória' },
+            { id: 'eds', name: 'Estrutura e Dinâmica Social', t: 3, p: 0, i: 4, cat: 'BCH - Obrigatória' },
+            { id: 'erp', name: 'Estado e Relações de Poder', t: 3, p: 0, i: 4, cat: 'BCH - Obrigatória' },
+            { id: 'pe_bch', name: 'Pensamento Econômico', t: 3, p: 0, i: 4, cat: 'BCH - Obrigatória' },
+            { id: 'ics', name: 'Identidade, Cultura e Subjetividade', t: 3, p: 0, i: 4, cat: 'BCH - Obrigatória' },
+            { id: 'ts', name: 'Território e Sociedade', t: 3, p: 0, i: 4, cat: 'BCH - Obrigatória' },
+            { id: 'formacao', name: 'Formação do Sistema Internacional', t: 3, p: 0, i: 4, cat: 'BCH - Obrigatória' },
+            { id: 'intro_hcs', name: 'Introdução às Humanidades e Ciências Sociais', t: 2, p: 0, i: 2, cat: 'BCH - Obrigatória' },
+
+            // Humanities & Options & New Additions
+            { id: 'cts', name: 'Ciência, Tecnologia e Sociedade', t: 3, p: 0, i: 3, cat: 'Interdisciplinar' },
+            { id: 'ep', name: 'Ética e Justiça', t: 3, p: 0, i: 3, cat: 'Interdisciplinar' },
+            { id: 'drgr', name: 'Desigualdade de Raça, Gênero e Renda', t: 3, p: 0, i: 4, cat: 'Opção Livre' },
+            { id: 'fmc', name: 'Física Matemática e Computacional', t: 4, p: 0, i: 4, cat: 'BC&T - Opção' },
+            { id: 'pe_est', name: 'Probabilidade e Estatística', t: 4, p: 0, i: 4, cat: 'BC&T - Opção' },
+            { id: 'al', name: 'Álgebra Linear', t: 4, p: 0, i: 4, cat: 'BC&T - Opção' }
+        ];
+
+        // State Management
+        let userCourses = JSON.parse(localStorage.getItem('ufabc_planner_courses')) || [];
+        let userTasks = JSON.parse(localStorage.getItem('ufabc_planner_tasks')) || [];
+
+        // Ensure legacy courses have 'studied' property
+        userCourses = userCourses.map(c => ({
+            ...c,
+            studied: c.studied || 0
+        }));
+
+
+        // --- Core Functions ---
+
+        function toggleTheme() {
+            const html = document.documentElement;
+            const icon = document.getElementById('theme-icon');
+            
+            if (html.classList.contains('dark')) {
+                html.classList.remove('dark');
+                html.classList.add('light');
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            } else {
+                html.classList.remove('light');
+                html.classList.add('dark');
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+        }
+        
+        function toggleAboutModal() {
+            const modal = document.getElementById('about-modal');
+            modal.classList.toggle('hidden');
+        }
+
+        // Helper to normalize strings (remove accents, lowercase)
+        function normalizeText(text) {
+            return text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+        }
+
+        function filterCourses() {
+            const rawInput = document.getElementById('course-search').value;
+            const normalizedInput = normalizeText(rawInput);
+            const resultsDiv = document.getElementById('search-results');
+            resultsDiv.innerHTML = '';
+
+            if (normalizedInput.length < 2) {
+                resultsDiv.classList.add('hidden');
+                return;
+            }
+
+            const filtered = courseDB.filter(c => 
+                normalizeText(c.name).includes(normalizedInput) && 
+                !userCourses.some(uc => uc.id === c.id) // Exclude already added
+            );
+
+            if (filtered.length > 0) {
+                resultsDiv.classList.remove('hidden');
+                filtered.forEach(c => {
+                    const btn = document.createElement('div');
+                    btn.className = 'p-3 bg-white dark:bg-pink-800 rounded-xl shadow-sm border border-pink-100 dark:border-pink-700 hover:bg-pink-50 dark:hover:bg-pink-700 cursor-pointer flex justify-between items-center group transition-all';
+                    btn.innerHTML = `
+                        <div>
+                            <div class="font-bold text-sm text-gray-800 dark:text-white">${c.name}</div>
+                            <div class="text-xs text-gray-500 dark:text-pink-300">${c.cat}</div>
+                        </div>
+                        <i class="fas fa-plus text-pink-400 group-hover:text-pink-600"></i>
+                    `;
+                    btn.onclick = () => addCourse(c);
+                    resultsDiv.appendChild(btn);
+                });
+            } else {
+                resultsDiv.classList.add('hidden');
+            }
+        }
+
+        function addCourse(course) {
+            // Initialize with studied: 0
+            const newEntry = { ...course, status: 'pending', studied: 0 }; 
+            userCourses.push(newEntry);
+            saveAndRender();
+            document.getElementById('course-search').value = '';
+            document.getElementById('search-results').classList.add('hidden');
+        }
+
+        function removeCourse(id) {
+            userCourses = userCourses.filter(c => c.id !== id);
+            saveAndRender();
+        }
+
+        function moveStatus(id, newStatus) {
+            const idx = userCourses.findIndex(c => c.id === id);
+            if (idx > -1) {
+                userCourses[idx].status = newStatus;
+                saveAndRender();
+            }
+        }
+
+        // --- NEW: Study Tracker Functions ---
+
+        function renderTracker() {
+            const tbody = document.getElementById('tracker-body');
+            tbody.innerHTML = '';
+
+            const doingCourses = userCourses.filter(c => c.status === 'doing');
+            
+            if (doingCourses.length === 0) {
+                 tbody.innerHTML = `<tr><td colspan="4" class="py-6 text-center text-pink-300 italic">Nenhuma matéria sendo cursada no momento. Arraste matérias para "Fazendo" no quadro abaixo.</td></tr>`;
+                 updateTrackerHeader(0, 0);
+                 return;
+            }
+
+            let totalGoal = 0;
+            let totalDone = 0;
+
+            doingCourses.forEach(c => {
+                totalGoal += c.i;
+                totalDone += (c.studied || 0);
+
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-pink-800/30 hover:bg-pink-800/20 transition-colors text-white text-black print:text-black print:border-gray-200';
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-medium">${c.name}</td>
+                    <td class="py-4 px-6 text-center font-bold text-pink-400 print:text-pink-700">${c.i}h</td>
+                    <td class="py-4 px-6 text-center text-lg">${(c.studied || 0).toFixed(1)}h</td>
+                    <td class="py-4 px-6 text-right no-print">
+                        <div class="flex justify-end gap-2">
+                            <button onclick="addStudyTime('${c.id}', 30)" class="bg-pink-700 hover:bg-pink-600 text-white text-xs px-3 py-1 rounded-lg transition-all">+ 30min</button>
+                            <button onclick="addStudyTime('${c.id}', 60)" class="bg-pink-500 hover:bg-pink-400 text-white text-xs px-3 py-1 rounded-lg transition-all">+ 1h</button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            updateTrackerHeader(totalDone, totalGoal);
+        }
+
+        function updateTrackerHeader(done, goal) {
+            document.getElementById('tracker-total-done').innerText = done.toFixed(1);
+            document.getElementById('tracker-total-goal').innerText = goal + " horas";
+            
+            let percentage = 0;
+            if(goal > 0) {
+                percentage = (done / goal) * 100;
+                if(percentage > 100) percentage = 100;
+            }
+            document.getElementById('tracker-progress-bar').style.width = `${percentage}%`;
+        }
+
+        function addStudyTime(id, minutes) {
+            const idx = userCourses.findIndex(c => c.id === id);
+            if (idx > -1) {
+                const current = userCourses[idx].studied || 0;
+                userCourses[idx].studied = current + (minutes / 60);
+                saveAndRender();
+            }
+        }
+
+        function resetWeeklyProgress() {
+            if(confirm("Deseja zerar todo o progresso de estudo desta semana?")) {
+                userCourses.forEach(c => c.studied = 0);
+                saveAndRender();
+            }
+        }
+
+
+        // --- Tasks (Lists & Reports) Functions ---
+
+        function updateTaskSubjectSelect() {
+            const select = document.getElementById('task-subject');
+            const currentVal = select.value;
+
+            select.innerHTML = '<option value="">Selecione a Matéria...</option>';
+            
+            const groups = {
+                'doing': document.createElement('optgroup'),
+                'pending': document.createElement('optgroup'),
+                'completed': document.createElement('optgroup')
+            };
+            groups['doing'].label = "Cursando Agora (Fazendo)";
+            groups['pending'].label = "Planejadas (Pendentes)";
+            groups['completed'].label = "Concluídas";
+
+            let hasDoing = false;
+            let hasPending = false;
+            let hasCompleted = false;
+
+            userCourses.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.innerText = c.name;
+                
+                if (groups[c.status]) {
+                    groups[c.status].appendChild(opt);
+                    if(c.status === 'doing') hasDoing = true;
+                    if(c.status === 'pending') hasPending = true;
+                    if(c.status === 'completed') hasCompleted = true;
+                }
+            });
+
+            if(hasDoing) select.appendChild(groups['doing']);
+            if(hasPending) select.appendChild(groups['pending']);
+            if(hasCompleted) select.appendChild(groups['completed']);
+
+            if (currentVal) select.value = currentVal;
+        }
+
+        function addTask() {
+            const nameInput = document.getElementById('task-name');
+            const subjectSelect = document.getElementById('task-subject');
+            
+            nameInput.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+            subjectSelect.classList.remove('border-red-500', 'ring-2', 'ring-red-500', 'animate-pulse');
+
+            const name = nameInput.value.trim();
+            const subjectId = subjectSelect.value;
+
+            if (userCourses.length === 0) {
+                alert("Você precisa adicionar disciplinas ao seu plano (na seção 1) antes de criar tarefas!");
+                document.getElementById('course-search').focus();
+                return;
+            }
+
+            let hasError = false;
+
+            if (!name) {
+                nameInput.classList.add('border-red-500', 'ring-2', 'ring-red-500');
+                hasError = true;
+            }
+
+            if (!subjectId) {
+                subjectSelect.classList.add('border-red-500', 'ring-2', 'ring-red-500', 'animate-pulse');
+                hasError = true;
+                setTimeout(() => alert("⚠️ Selecione a matéria na lista!\n\nMesmo que ela já esteja no seu quadro, você precisa indicar aqui a qual disciplina essa tarefa pertence."), 10);
+            }
+
+            if (hasError) return;
+
+            const subject = userCourses.find(c => c.id === subjectId);
+            const newTask = {
+                id: Date.now().toString(), 
+                name: name,
+                subjectId: subjectId,
+                subjectName: subject ? subject.name : 'Desconhecida',
+                status: 'pending' 
+            };
+
+            userTasks.push(newTask);
+            nameInput.value = '';
+            subjectSelect.value = '';
+            
+            nameInput.classList.remove('border-red-500', 'ring-2', 'ring-red-500');
+            subjectSelect.classList.remove('border-red-500', 'ring-2', 'ring-red-500', 'animate-pulse');
+            
+            saveAndRender();
+        }
+
+        function toggleTaskStatus(taskId) {
+            const task = userTasks.find(t => t.id === taskId);
+            if (task) {
+                task.status = task.status === 'pending' ? 'completed' : 'pending';
+                saveAndRender();
+            }
+        }
+
+        function removeTask(taskId) {
+            userTasks = userTasks.filter(t => t.id !== taskId);
+            saveAndRender();
+        }
+
+        function renderTasks() {
+            // FIX: Call this first to ensure dropdown is populated even if there are no tasks
+            updateTaskSubjectSelect();
+
+            const tbody = document.getElementById('tasks-body');
+            const msg = document.getElementById('no-tasks-msg');
+            tbody.innerHTML = '';
+
+            if (userTasks.length === 0) {
+                msg.classList.remove('hidden');
+                return;
+            } else {
+                msg.classList.add('hidden');
+            }
+
+            userTasks.forEach(task => {
+                const tr = document.createElement('tr');
+                tr.className = 'group hover:bg-pink-50 dark:hover:bg-pink-900/40 transition-colors';
+                
+                const isDone = task.status === 'completed';
+                const statusHtml = isDone 
+                    ? `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200">CONCLUÍDO</span>`
+                    : `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-200">PENDENTE</span>`;
+                
+                const btnText = isDone ? 'Reabrir' : 'Concluir';
+                const btnClass = isDone 
+                    ? 'bg-gray-200 text-gray-700 hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-200'
+                    : 'bg-pink-500 text-white hover:bg-pink-600';
+
+                tr.innerHTML = `
+                    <td class="py-4 px-6 font-medium text-gray-900 dark:text-white ${isDone ? 'line-through opacity-50' : ''}">
+                        ${task.name}
+                    </td>
+                    <td class="py-4 px-6 text-gray-500 dark:text-pink-200 text-xs uppercase tracking-wide">
+                        ${task.subjectName}
+                    </td>
+                    <td class="py-4 px-6">
+                        ${statusHtml}
+                    </td>
+                    <td class="py-4 px-6 text-right flex justify-end gap-2 items-center no-print">
+                        <button onclick="toggleTaskStatus('${task.id}')" class="${btnClass} px-3 py-1 rounded-full text-xs font-bold transition-all shadow-sm">
+                            ${btnText}
+                        </button>
+                        <button onclick="removeTask('${task.id}')" class="text-gray-400 hover:text-red-500 transition-colors ml-2">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        // --- Drag and Drop Logic ---
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drag(ev, id) { ev.dataTransfer.setData("text/plain", id); }
+        function drop(ev, status) {
+            ev.preventDefault();
+            const id = ev.dataTransfer.getData("text");
+            moveStatus(id, status);
+        }
+
+        // --- Rendering ---
+        function renderKanban() {
+            ['pending', 'doing', 'completed'].forEach(s => {
+                const el = document.getElementById(`list-${s}`);
+                const empty = el.querySelector('.empty-msg');
+                el.innerHTML = '';
+                if(empty) el.appendChild(empty);
+            });
+
+            const counts = { pending: 0, doing: 0, completed: 0 };
+
+            userCourses.forEach(course => {
+                counts[course.status]++;
+                const listEl = document.getElementById(`list-${course.status}`);
+                const empty = listEl.querySelector('.empty-msg');
+                if(empty) empty.style.display = 'none';
+
+                const tmpl = document.getElementById('card-template');
+                const clone = tmpl.content.cloneNode(true);
+                const card = clone.querySelector('div');
+                
+                card.ondragstart = (ev) => drag(ev, course.id);
+                card.querySelector('.item-name').innerText = course.name;
+                card.querySelector('.item-t').innerText = `T:${course.t}`;
+                card.querySelector('.item-p').innerText = `P:${course.p}`;
+                card.querySelector('.item-i').innerText = `I:${course.i}`;
+                card.querySelector('.delete-btn').onclick = () => removeCourse(course.id);
+
+                const statuses = ['pending', 'doing', 'completed'];
+                const currentIdx = statuses.indexOf(course.status);
+                const btnPrev = card.querySelector('.move-prev');
+                const btnNext = card.querySelector('.move-next');
+
+                if (currentIdx > 0) btnPrev.onclick = () => moveStatus(course.id, statuses[currentIdx - 1]);
+                else btnPrev.style.visibility = 'hidden';
+
+                if (currentIdx < 2) btnNext.onclick = () => moveStatus(course.id, statuses[currentIdx + 1]);
+                else btnNext.style.visibility = 'hidden';
+
+                listEl.appendChild(card);
+            });
+
+            document.getElementById('count-pending').innerText = counts.pending;
+            document.getElementById('count-doing').innerText = counts.doing;
+            document.getElementById('count-completed').innerText = counts.completed;
+
+            ['pending', 'doing', 'completed'].forEach(s => {
+                if(counts[s] === 0) {
+                    const el = document.getElementById(`list-${s}`);
+                    const empty = document.createElement('div');
+                    empty.className = 'text-center text-gray-400 text-sm mt-10 italic empty-msg';
+                    empty.innerText = s === 'pending' ? 'Nada pendente' : s === 'doing' ? 'Arraste aqui' : 'Nada concluído';
+                    el.appendChild(empty);
+                }
+            });
+        }
+
+        function renderSpreadsheet() {
+            const tbody = document.getElementById('spreadsheet-body');
+            tbody.innerHTML = '';
+            
+            let totalT = 0, totalP = 0, totalI = 0;
+
+            userCourses.forEach(c => {
+                const tr = document.createElement('tr');
+                tr.className = 'border-b border-pink-100 dark:border-pink-800 hover:bg-pink-50 dark:hover:bg-pink-900/50 transition-colors';
+                
+                const statusColors = {
+                    'pending': 'text-gray-500',
+                    'doing': 'text-pink-600 font-bold',
+                    'completed': 'text-green-600'
+                };
+                
+                const statusLabels = {
+                    'pending': 'Pendente',
+                    'doing': 'Cursando',
+                    'completed': 'Feito'
+                };
+
+                tr.innerHTML = `
+                    <td class="py-3 px-4 font-medium text-gray-700 dark:text-pink-100">${c.name}</td>
+                    <td class="py-3 px-4 text-xs text-gray-500 dark:text-pink-300">${c.cat}</td>
+                    <td class="py-3 px-4 text-center text-gray-600 dark:text-pink-200">${c.t}</td>
+                    <td class="py-3 px-4 text-center text-gray-600 dark:text-pink-200">${c.p}</td>
+                    <td class="py-3 px-4 text-center text-gray-600 dark:text-pink-200">${c.i}</td>
+                    <td class="py-3 px-4 text-center font-bold text-pink-500">${c.t + c.p}</td>
+                    <td class="py-3 px-4 text-right ${statusColors[c.status]} text-xs uppercase tracking-wide">${statusLabels[c.status]}</td>
+                    <td class="py-3 px-4 text-right no-print">
+                        <button onclick="removeCourse('${c.id}')" class="text-red-300 hover:text-red-500"><i class="fas fa-trash"></i></button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+
+                totalT += c.t;
+                totalP += c.p;
+                totalI += c.i;
+            });
+
+            document.getElementById('table-total-t').innerText = totalT;
+            document.getElementById('table-total-p').innerText = totalP;
+            document.getElementById('table-total-i').innerText = totalI;
+            document.getElementById('table-total-credits').innerText = totalT + totalP;
+
+            document.getElementById('total-t').innerText = totalT;
+            document.getElementById('total-p').innerText = totalP;
+            document.getElementById('total-i').innerText = totalI;
+            document.getElementById('total-credits').innerText = totalT + totalP;
+        }
+
+        function saveAndRender() {
+            localStorage.setItem('ufabc_planner_courses', JSON.stringify(userCourses));
+            localStorage.setItem('ufabc_planner_tasks', JSON.stringify(userTasks));
+            renderKanban();
+            renderSpreadsheet();
+            renderTracker();
+            renderTasks();
+        }
+
+        // --- Backup & Restore Functions ---
+
+        function downloadData() {
+            const data = {
+                courses: userCourses,
+                tasks: userTasks,
+                exportDate: new Date().toISOString()
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(data));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            downloadAnchorNode.setAttribute("download", "meu_planejamento_ufabc.json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
+        }
+
+        function printPDF() {
+            window.print();
+        }
+
+        function uploadData(inputElement) {
+            const file = inputElement.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    if (data.courses && Array.isArray(data.courses)) {
+                        userCourses = data.courses;
+                        userTasks = data.tasks || []; // Optional backward compatibility
+                        saveAndRender();
+                        alert("Dados carregados com sucesso! ✨");
+                    } else {
+                        alert("Arquivo inválido. Certifique-se de usar um backup gerado por este site.");
+                    }
+                } catch (error) {
+                    alert("Erro ao ler arquivo. O arquivo pode estar corrompido.");
+                    console.error(error);
+                }
+            };
+            reader.readAsText(file);
+            inputElement.value = ''; // Reset input so you can load same file again if needed
+        }
+
+        function clearData() {
+            if (confirm("Tem certeza que deseja apagar TUDO? Essa ação não pode ser desfeita.")) {
+                userCourses = [];
+                userTasks = [];
+                saveAndRender();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            saveAndRender();
+        });
+
+    </script>
+</body>
+</html>
